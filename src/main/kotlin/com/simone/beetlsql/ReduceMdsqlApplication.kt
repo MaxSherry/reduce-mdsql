@@ -8,6 +8,10 @@ import org.springframework.core.io.ClassPathResource
 
 @SpringBootApplication
 open class ReduceMdsqlApplication {
+	
+	/**
+	 * 配置文件内容有中文,此处使用UTF-8来读取
+	 */
 	@Bean
 	open fun configurer(): PropertySourcesPlaceholderConfigurer {
 		val configurer = PropertySourcesPlaceholderConfigurer()

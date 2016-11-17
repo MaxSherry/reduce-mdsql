@@ -7,12 +7,15 @@ import javax.annotation.PostConstruct
 
 @Component
 open class ReduceMd {
+	/**md所在的路径*/
 	@Value("\${rootmd}")
 	lateinit var rootmd: String
-	
+	/**md的sql语句列表 文件名.sqlid*/
 	val sqlSource: MutableList<String> = mutableListOf()
 	
-	
+	/**
+	 * 读取md文件并转成sql列表
+	 */
 	fun initSqlSource() {
 		val list = File(rootmd).walk().filter { it.isFile }.flatMap { f ->
 			val readLines = f.readLines()
@@ -21,6 +24,9 @@ open class ReduceMd {
 		sqlSource.addAll(list)
 	}
 	
+	/**
+	 * 扫描扩展BaseMapper类方式用到的sql
+	 */
 	fun scanJavaSourceBaseMapper(): List<String> {
 		val list = File(rootmd).parentFile.parentFile.walk().filter { it.isFile && it.name.endsWith(".java") }.map { it to it.readText() }.filter {
 			it.second.contains("""\s+extends\s+BaseMapper<\w+>\s+\{""".toRegex(RegexOption.IGNORE_CASE))
@@ -36,6 +42,9 @@ open class ReduceMd {
 		return contentSqlList
 	}
 	
+	/**
+	 * 扫描直接调用 md文件名.sqlid 方式用到的sql
+	 */
 	fun scanJavaSourceModule(): List<String> {
 		val list = File(rootmd).parentFile.parentFile.walk().filter { it.isFile && it.name.endsWith(".java") }.map { it to it.readText() }.toList()
 		val contentSqlList = sqlSource.map { sql -> list.find { it.second.contains(""""$sql"""", true) }?.run { sql } }.filterNotNull()
