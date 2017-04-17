@@ -17,7 +17,7 @@ open class ReduceMd {
 	 * 读取md文件并转成sql列表
 	 */
 	fun initSqlSource() {
-		val list = File(rootmd).walk()
+		File(rootmd).walk()
 				.filter { it.isFile && it.name.endsWith(".md", true) }
 				.flatMap { f ->
 					val readLines = f.readLines()
@@ -25,8 +25,7 @@ open class ReduceMd {
 							.filter { it.value.startsWith("===") }
 							.map { "${f.nameWithoutExtension}.${readLines[it.index - 1].trim()}" to f }
 							.asSequence()
-				}.toList()
-		sqlSource.addAll(list)
+				}.forEach { sqlSource.add(it) }
 	}
 	
 	/**
@@ -39,6 +38,7 @@ open class ReduceMd {
 				.filter { (_, v) ->
 					v.contains("""\s+extends\s+BaseMapper<\w+>\s+\{""".toRegex(RegexOption.IGNORE_CASE))
 				}.toList()
+				
 		val contentSqlList = sqlSource.map { sql ->
 			list.find { (_, v) ->
 				v.contains("<${sql.first.substringBefore(".")}>", true) &&
