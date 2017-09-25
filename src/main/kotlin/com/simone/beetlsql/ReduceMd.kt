@@ -6,12 +6,13 @@ import java.io.File
 import javax.annotation.PostConstruct
 
 @Component
-open class ReduceMd {
+open class ReduceMd() {
 	/**md所在的路径*/
 	@Value("\${rootmd}")
 	lateinit var rootmd: String
 	/**md的sql语句列表 文件名.sqlid*/
-	val sqlSource: MutableList<Pair<String, File>> = mutableListOf()
+	private val sqlSource: MutableList<Pair<String, File>> = mutableListOf()
+	private lateinit var javaFileSeq: Sequence<Pair<File, String>>
 	
 	/**
 	 * 读取md文件并转成sql列表
@@ -26,19 +27,20 @@ open class ReduceMd {
 							.map { "${f.nameWithoutExtension}.${readLines[it.index - 1].trim()}" to f }
 							.asSequence()
 				}.forEach { sqlSource.add(it) }
+		
+		javaFileSeq = File(rootmd).parentFile.parentFile.walk()
+				.filter { it.isFile && it.name.endsWith(".java") }
+				.map { it to it.readText() }
 	}
 	
 	/**
 	 * 扫描扩展BaseMapper类方式用到的sql
 	 */
 	fun scanJavaSourceBaseMapper(): List<Pair<String, File>> {
-		val list = File(rootmd).parentFile.parentFile.walk()
-				.filter { it.isFile && it.name.endsWith(".java") }
-				.map { it to it.readText() }
-				.filter { (_, v) ->
-					v.contains("""\s+extends\s+BaseMapper<\w+>\s+\{""".toRegex(RegexOption.IGNORE_CASE))
-				}.toList()
-				
+		val list = javaFileSeq.filter { (_, v) ->
+			v.contains("""\s+extends\s+BaseMapper<\w+>\s*\{""".toRegex(RegexOption.IGNORE_CASE))
+		}.toList()
+		
 		val contentSqlList = sqlSource.map { sql ->
 			list.find { (_, v) ->
 				v.contains("<${sql.first.substringBefore(".")}>", true) &&
@@ -54,15 +56,10 @@ open class ReduceMd {
 	 * 扫描直接调用 md文件名.sqlid 方式用到的sql
 	 */
 	fun scanJavaSourceModule(): List<Pair<String, File>> {
-		val list = File(rootmd).parentFile.parentFile.walk()
-				.filter { it.isFile && it.name.endsWith(".java") }
-				.map { it to it.readText() }
-				.toList()
-		val contentSqlList = sqlSource
-				.map { sql ->
-					list.find { (_, v) -> v.contains(""""${sql.first}"""", true) }?.let { sql }
-				}
-				.filterNotNull()
+		val list = javaFileSeq.toList()
+		val contentSqlList = sqlSource.map { sql ->
+			list.find { (_, v) -> v.contains(""""${sql.first}"""", true) }?.let { sql }
+		}.filterNotNull()
 		
 		return contentSqlList
 	}
