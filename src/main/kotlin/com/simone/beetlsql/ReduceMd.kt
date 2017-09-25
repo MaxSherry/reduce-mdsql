@@ -12,7 +12,11 @@ open class ReduceMd() {
 	lateinit var rootmd: String
 	/**md的sql语句列表 文件名.sqlid*/
 	private val sqlSource: MutableList<Pair<String, File>> = mutableListOf()
-	private lateinit var javaFileSeq: Sequence<Pair<File, String>>
+	private val javaFileSeq: Sequence<Pair<File, String>> by lazy {
+		File(rootmd).parentFile.parentFile.walk()
+				.filter { it.isFile && it.name.endsWith(".java") }
+				.map { it to it.readText() }
+	}
 	
 	/**
 	 * 读取md文件并转成sql列表
@@ -28,9 +32,7 @@ open class ReduceMd() {
 							.asSequence()
 				}.forEach { sqlSource.add(it) }
 		
-		javaFileSeq = File(rootmd).parentFile.parentFile.walk()
-				.filter { it.isFile && it.name.endsWith(".java") }
-				.map { it to it.readText() }
+		
 	}
 	
 	/**
